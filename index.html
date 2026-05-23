@@ -1,0 +1,1058 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BlueWave Bot — Intelligent Deriv Trading</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --ink: #050d1a;
+  --ink-2: #0b1829;
+  --ink-3: #0f2240;
+  --blue-vivid: #1a6bff;
+  --blue-glow: #3b8bff;
+  --blue-soft: #d0e4ff;
+  --cyan: #00d4ff;
+  --gold: #f0b429;
+  --white: #f7faff;
+  --muted: #7a9cc0;
+  --border: rgba(255,255,255,0.07);
+  --card: rgba(255,255,255,0.03);
+  --ff-display: 'DM Serif Display', serif;
+  --ff-ui: 'Syne', sans-serif;
+  --ff-mono: 'JetBrains Mono', monospace;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--ff-ui);
+  background: var(--ink);
+  color: var(--white);
+  overflow-x: hidden;
+  cursor: none;
+}
+
+/* Custom cursor */
+.cursor {
+  position: fixed;
+  width: 10px; height: 10px;
+  background: var(--cyan);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9999;
+  transition: transform 0.15s ease;
+  mix-blend-mode: screen;
+}
+.cursor-ring {
+  position: fixed;
+  width: 38px; height: 38px;
+  border: 1px solid rgba(0,212,255,0.5);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9998;
+  transition: all 0.35s cubic-bezier(0.2,1,0.5,1);
+}
+
+/* Noise Overlay */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.5;
+}
+
+/* ─── AMBIENT BLOBS ─── */
+.ambient {
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(120px);
+  opacity: 0.18;
+  pointer-events: none;
+  z-index: 0;
+  animation: drift 18s ease-in-out infinite alternate;
+}
+.ambient-1 { width: 700px; height: 700px; background: var(--blue-vivid); top: -200px; left: -200px; animation-delay: 0s; }
+.ambient-2 { width: 500px; height: 500px; background: var(--cyan); bottom: 10%; right: -100px; animation-delay: -6s; opacity: 0.12; }
+.ambient-3 { width: 400px; height: 400px; background: #6b2fff; top: 40%; left: 30%; animation-delay: -12s; opacity: 0.08; }
+
+@keyframes drift {
+  0% { transform: translate(0, 0) scale(1); }
+  100% { transform: translate(40px, 60px) scale(1.12); }
+}
+
+/* ─── LAYOUT ─── */
+.container { max-width: 1220px; margin: 0 auto; padding: 0 40px; position: relative; z-index: 2; }
+
+/* ─── NAVBAR ─── */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 500;
+  padding: 20px 0;
+  border-bottom: 1px solid var(--border);
+  background: rgba(5,13,26,0.7);
+  backdrop-filter: blur(24px);
+  transition: padding 0.3s;
+}
+.nav-inner { display: flex; justify-content: space-between; align-items: center; }
+.logo-wrap { display: flex; align-items: center; gap: 10px; }
+.logo-icon {
+  width: 40px; height: 40px;
+  background: linear-gradient(135deg, var(--blue-vivid), var(--cyan));
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; box-shadow: 0 0 20px rgba(26,107,255,0.4);
+}
+.logo-text {
+  font-family: var(--ff-ui);
+  font-weight: 800; font-size: 1.3rem; letter-spacing: -0.02em;
+  color: var(--white);
+}
+.logo-text em { font-style: normal; color: var(--cyan); }
+.nav-links { display: flex; align-items: center; gap: 36px; }
+.nav-links a {
+  font-size: 0.88rem; font-weight: 500; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--muted);
+  text-decoration: none; transition: color 0.2s;
+}
+.nav-links a:hover { color: var(--white); }
+.nav-cta {
+  background: var(--blue-vivid);
+  color: white !important;
+  padding: 10px 22px;
+  border-radius: 8px;
+  font-size: 0.82rem !important;
+  letter-spacing: 0.06em;
+  transition: background 0.2s, box-shadow 0.2s !important;
+  box-shadow: 0 0 0 0 rgba(26,107,255,0.3);
+}
+.nav-cta:hover { background: var(--blue-glow) !important; box-shadow: 0 0 24px rgba(26,107,255,0.45) !important; }
+
+/* ─── HERO ─── */
+.hero {
+  min-height: 100vh;
+  padding: 160px 0 100px;
+  display: flex; align-items: center;
+  position: relative;
+}
+.hero-inner {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 80px;
+  align-items: center;
+}
+.hero-label {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: var(--ff-mono);
+  font-size: 0.78rem; letter-spacing: 0.1em;
+  color: var(--cyan);
+  border: 1px solid rgba(0,212,255,0.3);
+  background: rgba(0,212,255,0.06);
+  padding: 7px 14px; border-radius: 4px;
+  margin-bottom: 28px;
+}
+.hero-label::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--cyan); animation: blink 1.4s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+.hero h1 {
+  font-family: var(--ff-display);
+  font-size: clamp(3rem, 5vw, 5rem);
+  line-height: 1.06;
+  letter-spacing: -0.02em;
+  color: var(--white);
+  margin-bottom: 24px;
+}
+.hero h1 .gradient-text {
+  background: linear-gradient(135deg, var(--blue-glow), var(--cyan));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.hero-sub {
+  font-size: 1.1rem; color: var(--muted);
+  line-height: 1.75; max-width: 520px;
+  margin-bottom: 44px;
+}
+.hero-actions { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+
+/* Buttons */
+.btn {
+  display: inline-flex; align-items: center; gap: 10px;
+  font-family: var(--ff-ui); font-weight: 600; font-size: 0.92rem;
+  padding: 14px 28px; border-radius: 10px; cursor: pointer;
+  text-decoration: none; border: none; transition: all 0.25s ease;
+  letter-spacing: 0.01em; position: relative; overflow: hidden;
+}
+.btn-primary {
+  background: linear-gradient(135deg, var(--blue-vivid) 0%, #0d5ce8 100%);
+  color: white;
+  box-shadow: 0 4px 30px rgba(26,107,255,0.35);
+}
+.btn-primary::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.15), transparent);
+  opacity: 0; transition: opacity 0.25s;
+}
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 40px rgba(26,107,255,0.5); }
+.btn-primary:hover::after { opacity: 1; }
+
+.btn-ghost {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
+.btn-ghost:hover { color: var(--white); border-color: rgba(255,255,255,0.2); background: rgba(255,255,255,0.04); }
+
+.btn-wa {
+  background: linear-gradient(135deg, #25d366, #128c7e);
+  color: white;
+  box-shadow: 0 4px 24px rgba(37,211,102,0.25);
+}
+.btn-wa:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(37,211,102,0.4); }
+
+/* Hero stats */
+.hero-stats {
+  display: flex; gap: 40px; margin-top: 56px;
+  padding-top: 40px;
+  border-top: 1px solid var(--border);
+}
+.stat-num {
+  font-family: var(--ff-display);
+  font-size: 2.4rem;
+  background: linear-gradient(135deg, var(--white), var(--blue-soft));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  line-height: 1;
+}
+.stat-label { font-size: 0.8rem; color: var(--muted); margin-top: 4px; letter-spacing: 0.05em; text-transform: uppercase; }
+
+/* ─── HERO VISUAL ─── */
+.hero-visual { position: relative; }
+
+.terminal-card {
+  background: var(--ink-2);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 40px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04);
+  animation: floatCard 6s ease-in-out infinite;
+}
+@keyframes floatCard { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-12px)} }
+
+.terminal-header {
+  display: flex; align-items: center; gap: 8px;
+  padding: 14px 18px;
+  background: rgba(255,255,255,0.03);
+  border-bottom: 1px solid var(--border);
+}
+.dot { width: 11px; height: 11px; border-radius: 50%; }
+.dot-r { background: #ff5f57; }
+.dot-y { background: #febc2e; }
+.dot-g { background: #28c840; }
+.terminal-title { font-family: var(--ff-mono); font-size: 0.75rem; color: var(--muted); margin-left: 8px; }
+
+.chart-area { padding: 20px; position: relative; height: 180px; }
+.chart-area svg { width: 100%; height: 100%; }
+
+.bot-metrics { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1px; background: var(--border); }
+.metric-cell {
+  background: var(--ink-2);
+  padding: 18px 20px;
+}
+.metric-cell .mc-label { font-family: var(--ff-mono); font-size: 0.7rem; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 6px; }
+.metric-cell .mc-val { font-family: var(--ff-mono); font-size: 1.3rem; font-weight: 500; color: var(--white); }
+.mc-val.up { color: #3ddc84; }
+.mc-val.down { color: #ff5f57; }
+
+.live-feed { padding: 16px 20px; }
+.feed-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  font-family: var(--ff-mono); font-size: 0.75rem;
+  color: var(--muted);
+  animation: fadeInRow 0.5s ease both;
+}
+.feed-row:last-child { border: none; }
+.feed-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.feed-dot.win { background: #3ddc84; box-shadow: 0 0 6px #3ddc84; }
+.feed-dot.loss { background: #ff5f57; box-shadow: 0 0 6px #ff5f57; }
+.feed-dot.pending { background: var(--gold); box-shadow: 0 0 6px var(--gold); animation: blink 1s infinite; }
+@keyframes fadeInRow { from{opacity:0;transform:translateX(-10px)} to{opacity:1;transform:none} }
+
+/* Floating badge */
+.float-badge {
+  position: absolute;
+  background: var(--ink-2);
+  border: 1px solid rgba(0,212,255,0.3);
+  border-radius: 12px;
+  padding: 14px 18px;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+  backdrop-filter: blur(10px);
+  font-family: var(--ff-mono);
+}
+.float-badge-1 { top: -30px; right: -30px; font-size: 0.78rem; }
+.float-badge-1 .badge-val { font-size: 1.5rem; color: #3ddc84; font-weight: 700; margin-top: 2px; }
+.float-badge-2 { bottom: 40px; left: -40px; display: flex; gap: 12px; align-items: center; font-size: 0.75rem; color: var(--muted); }
+.badge-icon { width: 36px; height: 36px; background: rgba(26,107,255,0.2); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--blue-glow); }
+
+/* ─── SECTION COMMON ─── */
+section { padding: 120px 0; position: relative; z-index: 2; }
+.section-tag {
+  font-family: var(--ff-mono);
+  font-size: 0.75rem; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--cyan);
+  margin-bottom: 16px; display: block;
+}
+.section-title {
+  font-family: var(--ff-display);
+  font-size: clamp(2rem, 3.5vw, 3rem);
+  line-height: 1.15; color: var(--white);
+  margin-bottom: 20px;
+}
+.section-sub { color: var(--muted); font-size: 1.05rem; line-height: 1.75; max-width: 600px; }
+
+.section-head { text-align: center; margin-bottom: 70px; }
+.section-head .section-sub { margin: 0 auto; }
+
+/* Divider line */
+.divider {
+  width: 60px; height: 2px;
+  background: linear-gradient(90deg, var(--blue-vivid), var(--cyan));
+  margin: 24px auto 0;
+  border-radius: 2px;
+}
+
+/* ─── FEATURES ─── */
+.features-bg {
+  background: linear-gradient(180deg, transparent, rgba(11,24,41,0.6) 20%, rgba(11,24,41,0.6) 80%, transparent);
+}
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  overflow: hidden;
+}
+.feat-card {
+  background: var(--ink-2);
+  padding: 40px 32px;
+  position: relative;
+  overflow: hidden;
+  transition: background 0.3s;
+}
+.feat-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--blue-vivid), transparent);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.feat-card:hover { background: rgba(15,34,64,0.9); }
+.feat-card:hover::before { opacity: 1; }
+
+.feat-num {
+  font-family: var(--ff-mono);
+  font-size: 0.7rem; color: rgba(255,255,255,0.12);
+  letter-spacing: 0.1em; margin-bottom: 20px;
+}
+.feat-icon {
+  width: 52px; height: 52px;
+  background: rgba(26,107,255,0.12);
+  border: 1px solid rgba(26,107,255,0.25);
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; color: var(--blue-glow);
+  margin-bottom: 22px;
+  transition: background 0.3s, box-shadow 0.3s;
+}
+.feat-card:hover .feat-icon {
+  background: rgba(26,107,255,0.2);
+  box-shadow: 0 0 20px rgba(26,107,255,0.25);
+}
+.feat-card h3 { font-size: 1.05rem; font-weight: 700; margin-bottom: 12px; color: var(--white); }
+.feat-card p { font-size: 0.9rem; color: var(--muted); line-height: 1.7; }
+
+/* ─── MARQUEE / TICKER ─── */
+.ticker-wrap {
+  background: var(--ink-2);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  padding: 18px 0; overflow: hidden;
+  position: relative; z-index: 2;
+}
+.ticker-track {
+  display: flex; gap: 0; width: max-content;
+  animation: ticker 25s linear infinite;
+}
+@keyframes ticker { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
+.ticker-item {
+  white-space: nowrap; padding: 0 40px;
+  font-family: var(--ff-mono); font-size: 0.82rem;
+  display: flex; align-items: center; gap: 12px;
+  color: var(--muted); border-right: 1px solid var(--border);
+}
+.ticker-item .tick-val { color: var(--white); }
+.ticker-item .tick-up { color: #3ddc84; }
+.ticker-item .tick-down { color: #ff5f57; }
+
+/* ─── HOW IT WORKS ─── */
+.steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; position: relative; }
+.steps::before {
+  content: '';
+  position: absolute;
+  top: 34px; left: 12%; right: 12%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--blue-vivid) 20%, var(--cyan) 80%, transparent);
+}
+.step { text-align: center; padding: 0 20px; }
+.step-num {
+  width: 68px; height: 68px; border-radius: 50%;
+  border: 1px solid rgba(26,107,255,0.4);
+  background: var(--ink-2);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--ff-mono); font-size: 1.2rem;
+  color: var(--blue-glow); margin: 0 auto 24px;
+  position: relative; z-index: 1;
+  box-shadow: 0 0 30px rgba(26,107,255,0.15);
+  transition: box-shadow 0.3s;
+}
+.step:hover .step-num { box-shadow: 0 0 40px rgba(26,107,255,0.4); }
+.step h3 { font-size: 1rem; font-weight: 700; margin-bottom: 10px; }
+.step p { font-size: 0.87rem; color: var(--muted); line-height: 1.65; }
+
+/* ─── PRICING ─── */
+.pricing-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; align-items: start; }
+
+.plan-card {
+  background: var(--ink-2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 36px 28px;
+  position: relative;
+  transition: transform 0.3s, border-color 0.3s;
+}
+.plan-card:hover { transform: translateY(-6px); border-color: rgba(26,107,255,0.3); }
+.plan-card.featured {
+  border-color: rgba(26,107,255,0.5);
+  background: var(--ink-3);
+  box-shadow: 0 0 60px rgba(26,107,255,0.12), inset 0 0 60px rgba(26,107,255,0.04);
+}
+.plan-badge {
+  position: absolute; top: -14px; left: 50%; transform: translateX(-50%);
+  background: linear-gradient(135deg, var(--blue-vivid), var(--cyan));
+  color: white; font-size: 0.72rem; font-weight: 700;
+  padding: 5px 14px; border-radius: 20px; letter-spacing: 0.08em;
+  white-space: nowrap; text-transform: uppercase;
+}
+.plan-name { font-size: 0.8rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); font-weight: 600; margin-bottom: 12px; }
+.plan-price {
+  font-family: var(--ff-display);
+  font-size: 3.2rem; line-height: 1;
+  color: var(--white); margin-bottom: 4px;
+}
+.plan-price sup { font-size: 1.4rem; vertical-align: super; }
+.plan-per { font-size: 0.85rem; color: var(--muted); margin-bottom: 28px; }
+.plan-divider { height: 1px; background: var(--border); margin-bottom: 24px; }
+.plan-feature {
+  display: flex; align-items: flex-start; gap: 12px;
+  font-size: 0.88rem; color: var(--muted);
+  margin-bottom: 14px;
+}
+.plan-feature i { color: var(--cyan); margin-top: 2px; font-size: 0.75rem; flex-shrink: 0; }
+.plan-feature.dim i { color: var(--border); }
+.plan-feature.dim span { opacity: 0.4; }
+.plan-btn { display: block; text-align: center; width: 100%; margin-top: 28px; }
+
+/* ─── TESTIMONIALS ─── */
+.testi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+.testi-card {
+  background: var(--ink-2);
+  border: 1px solid var(--border);
+  border-radius: 16px; padding: 32px 26px;
+  transition: border-color 0.3s;
+}
+.testi-card:hover { border-color: rgba(26,107,255,0.25); }
+.testi-stars { color: var(--gold); font-size: 0.85rem; margin-bottom: 18px; letter-spacing: 2px; }
+.testi-text { font-size: 0.93rem; color: rgba(247,250,255,0.8); line-height: 1.8; margin-bottom: 24px; font-style: italic; }
+.testi-author { display: flex; align-items: center; gap: 14px; }
+.testi-avatar {
+  width: 44px; height: 44px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 0.85rem;
+  background: linear-gradient(135deg, var(--blue-vivid), var(--cyan));
+  color: white; flex-shrink: 0;
+}
+.testi-name { font-weight: 700; font-size: 0.9rem; }
+.testi-role { font-size: 0.8rem; color: var(--muted); margin-top: 2px; }
+
+/* ─── FAQ ─── */
+.faq-wrap { max-width: 780px; margin: 0 auto; }
+.faq-item {
+  border-bottom: 1px solid var(--border);
+}
+.faq-q {
+  width: 100%; display: flex; justify-content: space-between; align-items: center;
+  padding: 24px 0; cursor: pointer;
+  font-weight: 600; font-size: 1rem; color: var(--white);
+  background: none; border: none; text-align: left;
+  transition: color 0.2s;
+}
+.faq-q:hover { color: var(--cyan); }
+.faq-q i { color: var(--muted); font-size: 0.85rem; transition: transform 0.3s; }
+.faq-item.open .faq-q i { transform: rotate(45deg); color: var(--cyan); }
+.faq-a {
+  max-height: 0; overflow: hidden;
+  font-size: 0.93rem; color: var(--muted); line-height: 1.8;
+  transition: max-height 0.4s cubic-bezier(0.4,0,0.2,1), padding 0.3s;
+}
+.faq-item.open .faq-a { max-height: 200px; padding-bottom: 24px; }
+
+/* ─── CTA SECTION ─── */
+.cta-wrap {
+  position: relative; border-radius: 24px;
+  background: var(--ink-2);
+  border: 1px solid rgba(26,107,255,0.2);
+  padding: 80px 60px;
+  text-align: center; overflow: hidden;
+}
+.cta-wrap::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse 70% 60% at 50% 0%, rgba(26,107,255,0.15), transparent 70%);
+}
+.cta-wrap::after {
+  content: '';
+  position: absolute;
+  bottom: -60px; left: 50%; transform: translateX(-50%);
+  width: 400px; height: 200px;
+  background: radial-gradient(ellipse, rgba(0,212,255,0.08), transparent 70%);
+}
+.cta-wrap h2 {
+  font-family: var(--ff-display);
+  font-size: clamp(2rem, 3vw, 2.8rem);
+  color: var(--white); position: relative; z-index: 1;
+  margin-bottom: 16px;
+}
+.cta-wrap p { color: var(--muted); margin-bottom: 36px; position: relative; z-index: 1; }
+.cta-actions { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; position: relative; z-index: 1; }
+
+/* ─── FOOTER ─── */
+footer {
+  background: #030912;
+  border-top: 1px solid var(--border);
+  padding: 60px 0 32px;
+  position: relative; z-index: 2;
+}
+.footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 60px; margin-bottom: 50px; }
+.footer-brand p { font-size: 0.88rem; color: var(--muted); line-height: 1.75; margin-top: 16px; max-width: 300px; }
+.footer-col h4 { font-size: 0.8rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 18px; }
+.footer-col a { display: block; color: rgba(247,250,255,0.6); text-decoration: none; font-size: 0.9rem; margin-bottom: 10px; transition: color 0.2s; }
+.footer-col a:hover { color: var(--white); }
+.footer-bottom {
+  display: flex; justify-content: space-between; align-items: center;
+  padding-top: 24px; border-top: 1px solid var(--border);
+  font-size: 0.8rem; color: var(--muted); flex-wrap: wrap; gap: 16px;
+}
+.risk-note {
+  font-family: var(--ff-mono);
+  font-size: 0.72rem; color: rgba(255,255,255,0.2);
+  line-height: 1.7; max-width: 700px; margin-top: 24px;
+  border-left: 2px solid rgba(255,255,255,0.08);
+  padding-left: 16px;
+}
+
+/* ─── SCROLL REVEAL ─── */
+.reveal { opacity: 0; transform: translateY(30px); transition: opacity 0.7s ease, transform 0.7s ease; }
+.reveal.visible { opacity: 1; transform: none; }
+.reveal-d1 { transition-delay: 0.1s; }
+.reveal-d2 { transition-delay: 0.2s; }
+.reveal-d3 { transition-delay: 0.3s; }
+.reveal-d4 { transition-delay: 0.4s; }
+
+/* ─── RESPONSIVE ─── */
+@media (max-width: 1024px) {
+  .hero-inner { grid-template-columns: 1fr; gap: 60px; }
+  .features-grid { grid-template-columns: repeat(2, 1fr); }
+  .pricing-grid { grid-template-columns: 1fr; max-width: 420px; margin: 0 auto; }
+  .pricing-grid { max-width: none; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+  .steps { grid-template-columns: repeat(2, 1fr); gap: 40px; }
+  .steps::before { display: none; }
+  .footer-grid { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 768px) {
+  .container { padding: 0 24px; }
+  .nav-links { display: none; }
+  .hero h1 { font-size: 2.6rem; }
+  .hero-stats { gap: 24px; }
+  .features-grid { grid-template-columns: 1fr; }
+  .testi-grid { grid-template-columns: 1fr; }
+  .steps { grid-template-columns: 1fr; }
+  .cta-wrap { padding: 50px 24px; }
+  .footer-grid { grid-template-columns: 1fr; gap: 36px; }
+  .footer-bottom { flex-direction: column; text-align: center; }
+  .float-badge-1, .float-badge-2 { display: none; }
+  .hero-visual { display: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- Cursor -->
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+
+<!-- Ambient -->
+<div class="ambient ambient-1"></div>
+<div class="ambient ambient-2"></div>
+<div class="ambient ambient-3"></div>
+
+<!-- NAVBAR -->
+<nav>
+  <div class="container nav-inner">
+    <div class="logo-wrap">
+      <div class="logo-icon"><i class="fas fa-wave-square" style="color:white;font-size:18px;"></i></div>
+      <span class="logo-text">BlueWave<em>Bot</em></span>
+    </div>
+    <div class="nav-links">
+      <a href="#features">Features</a>
+      <a href="#how">How It Works</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#testimonials">Reviews</a>
+      <a href="#faq">FAQ</a>
+      <a href="https://t.me/+y3U6edEqQgI5Zjlk" target="_blank" class="nav-cta"><i class="fab fa-telegram"></i> Get Started</a>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="container">
+    <div class="hero-inner">
+      <div class="hero-left">
+        <div class="hero-label reveal"><i class="fas fa-circle-dot"></i> Live on Deriv Markets</div>
+        <h1 class="reveal reveal-d1">Trade Smarter.<br>Automate with <span class="gradient-text">Intelligence.</span></h1>
+        <p class="hero-sub reveal reveal-d2">Next-generation algorithmic trading bot engineered for Deriv — synthetic indices, Forex, and Boom/Crash markets. Set it once. Profit continuously.</p>
+        <div class="hero-actions reveal reveal-d3">
+          <a href="https://wa.me/254101797321?text=Hello%20BlueWave%2C%20I%20want%20to%20purchase%20the%20Deriv%20trading%20bot" target="_blank" class="btn btn-primary"><i class="fab fa-whatsapp"></i> Start on WhatsApp</a>
+          <a href="https://t.me/+y3U6edEqQgI5Zjlk" target="_blank" class="btn btn-primary"><i class="fab fa-telegram"></i> Join Telegram</a>
+        </div>
+        <div class="hero-stats reveal reveal-d4">
+          <div><div class="stat-num">2,800+</div><div class="stat-label">Active Traders</div></div>
+          <div><div class="stat-num">1.2M+</div><div class="stat-label">Trades Executed</div></div>
+          <div><div class="stat-num">99.2%</div><div class="stat-label">Uptime SLA</div></div>
+        </div>
+      </div>
+      <div class="hero-visual">
+        <!-- Terminal card -->
+        <div class="terminal-card">
+          <div class="terminal-header">
+            <span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span>
+            <span class="terminal-title">BlueWave — Live Dashboard</span>
+          </div>
+          <div class="chart-area">
+            <svg viewBox="0 0 560 160" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="cg" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#1a6bff" stop-opacity="0.35"/>
+                  <stop offset="100%" stop-color="#1a6bff" stop-opacity="0"/>
+                </linearGradient>
+                <filter id="glow"><feGaussianBlur stdDeviation="2" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+              </defs>
+              <!-- Grid lines -->
+              <line x1="0" y1="40" x2="560" y2="40" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+              <line x1="0" y1="80" x2="560" y2="80" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+              <line x1="0" y1="120" x2="560" y2="120" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+              <!-- Area fill -->
+              <path d="M0,130 L40,110 L80,95 L120,105 L160,80 L200,90 L240,60 L280,70 L320,45 L360,55 L400,30 L440,40 L480,20 L520,28 L560,15 L560,160 L0,160 Z" fill="url(#cg)"/>
+              <!-- Line -->
+              <path d="M0,130 L40,110 L80,95 L120,105 L160,80 L200,90 L240,60 L280,70 L320,45 L360,55 L400,30 L440,40 L480,20 L520,28 L560,15" fill="none" stroke="#1a6bff" stroke-width="2.5" filter="url(#glow)"/>
+              <!-- Dot at end -->
+              <circle cx="560" cy="15" r="5" fill="#00d4ff" filter="url(#glow)"/>
+              <circle cx="560" cy="15" r="10" fill="rgba(0,212,255,0.2)"/>
+            </svg>
+          </div>
+          <div class="bot-metrics">
+            <div class="metric-cell"><div class="mc-label">Win Rate</div><div class="mc-val up">73.4%</div></div>
+            <div class="metric-cell"><div class="mc-label">Today P&L</div><div class="mc-val up">+$284</div></div>
+            <div class="metric-cell"><div class="mc-label">Drawdown</div><div class="mc-val">2.1%</div></div>
+          </div>
+          <div class="live-feed">
+            <div class="feed-row" style="animation-delay:0.1s"><span class="feed-dot win"></span><span style="color:var(--white)">BOOM 300 · Rise</span><span style="margin-left:auto;color:#3ddc84">+$18.50</span></div>
+            <div class="feed-row" style="animation-delay:0.3s"><span class="feed-dot win"></span><span style="color:var(--white)">CRASH 500 · Fall</span><span style="margin-left:auto;color:#3ddc84">+$11.20</span></div>
+            <div class="feed-row" style="animation-delay:0.5s"><span class="feed-dot loss"></span><span style="color:var(--white)">V75 Index · Rise</span><span style="margin-left:auto;color:#ff5f57">-$5.00</span></div>
+            <div class="feed-row" style="animation-delay:0.7s"><span class="feed-dot pending"></span><span style="color:var(--white)">Step Index · Rise</span><span style="margin-left:auto;color:var(--gold)">OPEN</span></div>
+          </div>
+        </div>
+        <!-- Floating badges -->
+        <div class="float-badge float-badge-1">
+          <div style="color:var(--muted);font-size:0.72rem;">Total Return</div>
+          <div class="badge-val">+247%</div>
+        </div>
+        <div class="float-badge float-badge-2">
+          <div class="badge-icon"><i class="fas fa-shield-halved"></i></div>
+          <div>Risk Guard<br><span style="color:var(--white);font-weight:600;">Active</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TICKER -->
+<div class="ticker-wrap">
+  <div class="ticker-track" id="ticker">
+    <div class="ticker-item">BOOM 300 <span class="tick-val">4,821.3</span><span class="tick-up">▲ 0.84%</span></div>
+    <div class="ticker-item">CRASH 500 <span class="tick-val">8,104.6</span><span class="tick-down">▼ 0.22%</span></div>
+    <div class="ticker-item">V75 INDEX <span class="tick-val">9,348.1</span><span class="tick-up">▲ 1.14%</span></div>
+    <div class="ticker-item">STEP INDEX <span class="tick-val">1,022.8</span><span class="tick-up">▲ 0.05%</span></div>
+    <div class="ticker-item">EUR/USD <span class="tick-val">1.0837</span><span class="tick-up">▲ 0.33%</span></div>
+    <div class="ticker-item">BOOM 1000 <span class="tick-val">6,291.4</span><span class="tick-down">▼ 0.19%</span></div>
+    <div class="ticker-item">CRASH 1000 <span class="tick-val">7,820.2</span><span class="tick-up">▲ 0.61%</span></div>
+    <div class="ticker-item">GBP/USD <span class="tick-val">1.2741</span><span class="tick-up">▲ 0.44%</span></div>
+    <!-- duplicate for seamless loop -->
+    <div class="ticker-item">BOOM 300 <span class="tick-val">4,821.3</span><span class="tick-up">▲ 0.84%</span></div>
+    <div class="ticker-item">CRASH 500 <span class="tick-val">8,104.6</span><span class="tick-down">▼ 0.22%</span></div>
+    <div class="ticker-item">V75 INDEX <span class="tick-val">9,348.1</span><span class="tick-up">▲ 1.14%</span></div>
+    <div class="ticker-item">STEP INDEX <span class="tick-val">1,022.8</span><span class="tick-up">▲ 0.05%</span></div>
+    <div class="ticker-item">EUR/USD <span class="tick-val">1.0837</span><span class="tick-up">▲ 0.33%</span></div>
+    <div class="ticker-item">BOOM 1000 <span class="tick-val">6,291.4</span><span class="tick-down">▼ 0.19%</span></div>
+    <div class="ticker-item">CRASH 1000 <span class="tick-val">7,820.2</span><span class="tick-up">▲ 0.61%</span></div>
+    <div class="ticker-item">GBP/USD <span class="tick-val">1.2741</span><span class="tick-up">▲ 0.44%</span></div>
+  </div>
+</div>
+
+<!-- FEATURES -->
+<section id="features" class="features-bg">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="section-tag">Core Capabilities</span>
+      <h2 class="section-title">Powerful automation.<br>Zero code required.</h2>
+      <div class="divider"></div>
+      <p class="section-sub" style="margin-top:20px;">BlueWave connects directly to Deriv's official API — configure once, trade continuously.</p>
+    </div>
+    <div class="features-grid reveal reveal-d1">
+      <div class="feat-card">
+        <div class="feat-num">01</div>
+        <div class="feat-icon"><i class="fas fa-chart-simple"></i></div>
+        <h3>Smart Strategy Engine</h3>
+        <p>Pre-built Martingale, D'Alembert, and Oscar's Grind logic. Backtest against real historical Deriv market data before going live.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-num">02</div>
+        <div class="feat-icon"><i class="fas fa-shield-halved"></i></div>
+        <h3>Risk Guard & Circuit Breakers</h3>
+        <p>Configure daily loss limits, maximum trade size, and automatic cool-down periods. Capital preservation built into the core.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-num">03</div>
+        <div class="feat-icon"><i class="fas fa-clock-rotate-left"></i></div>
+        <h3>24/7 Non-Stop Execution</h3>
+        <p>Deploy on any VPS or cloud server. The bot never sleeps — capturing every market opportunity around the clock without you.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-num">04</div>
+        <div class="feat-icon"><i class="fas fa-layer-group"></i></div>
+        <h3>Multi-Asset Coverage</h3>
+        <p>Boom &amp; Crash indices, Step Index, V75, Forex pairs, and Commodities. Full Deriv synthetic and real markets supported.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-num">05</div>
+        <div class="feat-icon"><i class="fas fa-chart-line"></i></div>
+        <h3>Real-Time Analytics</h3>
+        <p>Live P&amp;L dashboard, equity curve, win-rate heatmap, and instant Telegram alerts. Know your numbers, always.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-num">06</div>
+        <div class="feat-icon"><i class="fas fa-plug-circle-bolt"></i></div>
+        <h3>One-Click API Connect</h3>
+        <p>Paste your Deriv API token, choose your strategy, hit start. No installation, no scripts, no technical knowledge needed.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section id="how">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="section-tag">Process</span>
+      <h2 class="section-title">Up and running in minutes.</h2>
+      <div class="divider"></div>
+    </div>
+    <div class="steps">
+      <div class="step reveal reveal-d1">
+        <div class="step-num">01</div>
+        <h3>Contact via WhatsApp</h3>
+        <p>Reach our team directly. We'll walk you through your options and match you to the right plan for your goals.</p>
+      </div>
+      <div class="step reveal reveal-d2">
+        <div class="step-num">02</div>
+        <h3>Get Your Access</h3>
+        <p>Receive your bot license and dashboard access. We handle the setup — no installs, no config files to edit.</p>
+      </div>
+      <div class="step reveal reveal-d3">
+        <div class="step-num">03</div>
+        <h3>Connect to Deriv</h3>
+        <p>Paste your Deriv API token into the dashboard. Grant trade-only access — withdrawals are impossible by design.</p>
+      </div>
+      <div class="step reveal reveal-d4">
+        <div class="step-num">04</div>
+        <h3>Automate & Monitor</h3>
+        <p>Select your strategy, set your risk parameters, and let BlueWave trade 24/7. Monitor via Telegram alerts or the live dashboard.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section id="pricing">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="section-tag">Pricing</span>
+      <h2 class="section-title">Plans for every trader.</h2>
+      <div class="divider"></div>
+      <p class="section-sub" style="margin-top:20px;">All plans include full bot features. No hidden fees. Cancel anytime.</p>
+    </div>
+    <div class="pricing-grid reveal reveal-d1">
+      <div class="plan-card">
+        <div class="plan-name">Starter</div>
+        <div class="plan-price"><sup>$</sup>19</div>
+        <div class="plan-per">per month</div>
+        <div class="plan-divider"></div>
+        <div class="plan-feature"><i class="fas fa-check"></i><span>Up to $5k monthly volume</span></div>
+        <div class="plan-feature"><i class="fas fa-check"></i><span>5 active strategies</span></div>
+        <div class="plan-feature"><i class="fas fa-check"></i><span>Email support (48h response)</span></div>
+        <div class="plan-feature"><i class="fas fa-check"></i><span>Basic P&L analytics</span></div>
+        <div class="plan-feature dim"><i class="fas fa-check"></i><span>Telegram alerts</span></div>
+        <div class="plan-feature dim"><i class="fas fa-check"></i><span>VPS deployment</span></div>
+        <a href="https://wa.me/254101797321?text=Hi%20I'm%20interested%20in%20the%20Starter%20plan" target="_blank" class="btn btn-ghost plan-btn"><i class="fab fa-whatsapp"></i> Contact Sales</a>
+      </div>
+      <div class="plan-card featured">
+        <div class="plan-badge">🔥 Most Popular</div>
+        <div class="plan-name">Professional</div>
+        <div class="plan-price"><sup>$</sup>49</div>
+        <div class="plan-per">per month</div>
+        <div class="plan-divider"></div>
+        <div class="plan-feature"><i class="fas fa-check"></i><span>Unlimited monthly volume</span></div>
+        <div class="plan-feature"><i class="fas fa-check"></i><span>Unlimited strategies & indicators</span></div>
+        <div class="plan-feature"><i class="fas fa-check"></i><span>Priority support & Telegram alerts</span></div>
+        <div class="plan-feature"><i class="fas fa-check"></i><span>Advanced risk management suite</span></div>
+        <div class="plan-feature"><i class="fas fa-check"></i><span>VPS-ready cloud deployment</span></div>
+        <div class="plan-feature"><i class="fas fa-check"></i><span>Live equity curve & heatmap</span></div>
+        <a href="https://wa.me/254101797321?text=I%20want%20the%20Professional%20plan%20of%20BlueWave%20Bot" target="_blank" class="btn btn-primary plan-btn"><i class="fab fa-whatsapp"></i> Contact Sales</a>
+      </div>
+      <div class="plan-card">
+        <div class="plan-name">Elite</div>
+        <div class="plan-price"><sup>$</sup>99</div>
+        <div class="plan-per">per month</div>
+        <div class="plan-divider"></div>
+        <div class="plan-feature"><i class="fas fa-check"></i><span>Everything in Professional</span></div>
+        <div class="plan-feature"><i class="fas fa-check"></i><span>Dedicated account manager</span></div>
+        <div class="plan-feature"><i class="fas fa-check"></i><span>Custom indicator development</span></div>
+        <div class="plan-feature"><i class="fas fa-check"></i><span>Multi-bot portfolio mode</span></div>
+        <div class="plan-feature"><i class="fas fa-check"></i><span>Beta features — early access</span></div>
+        <div class="plan-feature"><i class="fas fa-check"></i><span>1-on-1 strategy consultation</span></div>
+        <a href="https://wa.me/254101797321?text=I'm%20interested%20in%20the%20Elite%20plan" target="_blank" class="btn btn-ghost plan-btn"><i class="fab fa-whatsapp"></i> Contact Sales</a>
+      </div>
+    </div>
+    <p style="text-align:center;margin-top:36px;font-size:0.85rem;color:var(--muted);">
+      <i class="fas fa-lock" style="color:var(--cyan);margin-right:6px;"></i>
+      All plans are non-custodial — your API credentials are encrypted locally and never stored on our servers.
+    </p>
+  </div>
+</section>
+
+<!-- TESTIMONIALS -->
+<section id="testimonials" style="background:linear-gradient(180deg,transparent,rgba(11,24,41,0.5),transparent);">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="section-tag">Social Proof</span>
+      <h2 class="section-title">Trusted by Deriv traders worldwide.</h2>
+      <div class="divider"></div>
+    </div>
+    <div class="testi-grid reveal reveal-d1">
+      <div class="testi-card">
+        <div class="testi-stars">★★★★★</div>
+        <p class="testi-text">"BlueWave increased my Boom 300 win rate by 32% within the first month. The drawdown controls literally saved my account during a volatility spike. This is the real deal."</p>
+        <div class="testi-author"><div class="testi-avatar">MK</div><div><div class="testi-name">Maria K.</div><div class="testi-role">Professional Trader — Nairobi</div></div></div>
+      </div>
+      <div class="testi-card">
+        <div class="testi-stars">★★★★★</div>
+        <p class="testi-text">"I'm not a coder at all. Setup took literally 10 minutes and the bot's been running for 3 months straight. The WhatsApp support team replies within minutes. Highly recommended."</p>
+        <div class="testi-author"><div class="testi-avatar">JD</div><div><div class="testi-name">James D.</div><div class="testi-role">Deriv Enthusiast — Lagos</div></div></div>
+      </div>
+      <div class="testi-card">
+        <div class="testi-stars">★★★★★</div>
+        <p class="testi-text">"I've tried four other bots. BlueWave is the only one that actually has proper risk management. The Telegram alerts keep me in the loop even when I'm away from my desk."</p>
+        <div class="testi-author"><div class="testi-avatar">RT</div><div><div class="testi-name">Rita T.</div><div class="testi-role">Full-time Investor — Kampala</div></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section id="faq">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="section-tag">FAQ</span>
+      <h2 class="section-title">Common questions, answered.</h2>
+      <div class="divider"></div>
+    </div>
+    <div class="faq-wrap reveal reveal-d1">
+      <div class="faq-item">
+        <button class="faq-q">Is BlueWave Bot compatible with Deriv? <i class="fas fa-plus"></i></button>
+        <div class="faq-a">Yes. BlueWave connects directly to Deriv's official WebSocket API. We support both demo and live accounts, including all synthetic indices (Boom &amp; Crash, Step Index, Volatility Indices) as well as Forex pairs available on DTrader and Deriv MT5.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q">Do I need any coding or technical skills? <i class="fas fa-plus"></i></button>
+        <div class="faq-a">None at all. The entire setup process is handled by our team via WhatsApp. You'll receive a dashboard link, paste your Deriv API token, choose a strategy from the visual builder, and you're live. No terminal, no scripts, no configuration files.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q">Is my money safe? How does the bot access my account? <i class="fas fa-plus"></i></button>
+        <div class="faq-a">BlueWave only uses read &amp; trade-only API tokens. Withdrawals are architecturally impossible — the token scope we use doesn't permit it. Your funds never leave your Deriv account and we never hold private keys or balances of any kind.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q">Can I run it 24/7 without leaving my computer on? <i class="fas fa-plus"></i></button>
+        <div class="faq-a">Yes. We recommend deploying on a VPS (Virtual Private Server) for continuous operation. Our team can recommend affordable cloud hosting options starting from $5/month that keep the bot running even when your PC is off.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q">What is the cancellation and refund policy? <i class="fas fa-plus"></i></button>
+        <div class="faq-a">Monthly plans can be cancelled anytime with no penalties. Annual subscribers are eligible for a 14-day money-back guarantee. Contact our team via WhatsApp to initiate any refund or cancellation request.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section id="contact" style="padding-bottom:80px;">
+  <div class="container">
+    <div class="cta-wrap reveal">
+      <h2>Ready to automate your Deriv trading?</h2>
+      <p>Join 2,800+ traders who run BlueWave Bot 24/7 across Boom, Crash, and Forex markets.</p>
+      <div class="cta-actions">
+        <a href="https://wa.me/254101797321?text=Hello%20BlueWave%2C%20I%20want%20to%20start%20trading%20with%20the%20bot" target="_blank" class="btn btn-wa"><i class="fab fa-whatsapp"></i> Contact Sales via WhatsApp</a>
+        <a href="https://wa.me/254101797321?text=Hello%20BlueWave%2C%20I%20need%20support" target="_blank" class="btn btn-ghost"><i class="fas fa-headset"></i> Technical Support</a>
+      </div>
+      <p style="margin-top:28px;font-size:0.82rem;color:var(--muted);"><i class="fab fa-whatsapp" style="color:#25d366;"></i> Direct line: <strong style="color:var(--white);">+254 101 797321</strong></p>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="logo-wrap">
+          <div class="logo-icon"><i class="fas fa-wave-square" style="color:white;font-size:18px;"></i></div>
+          <span class="logo-text">BlueWave<em>Bot</em></span>
+        </div>
+        <p>AI-driven algorithmic trading engineered for Deriv markets. Trade with confidence, automate with precision.</p>
+        <a href="https://wa.me/254101797321" target="_blank" style="display:inline-flex;align-items:center;gap:8px;margin-top:20px;color:#25d366;text-decoration:none;font-size:0.88rem;"><i class="fab fa-whatsapp"></i> +254 101 797321</a>
+      </div>
+      <div class="footer-col">
+        <h4>Product</h4>
+        <a href="#features">Features</a>
+        <a href="#how">How It Works</a>
+        <a href="#pricing">Pricing</a>
+        <a href="#testimonials">Reviews</a>
+      </div>
+      <div class="footer-col">
+        <h4>Support</h4>
+        <a href="#faq">FAQ</a>
+        <a href="https://wa.me/254101797321?text=I%20need%20technical%20support" target="_blank">WhatsApp Support</a>
+        <a href="https://wa.me/254101797321?text=I%20want%20a%20demo%20of%20BlueWave%20Bot" target="_blank">Request a Demo</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <div>© 2026 BlueWave Bot — Automated Trading Intelligence</div>
+      <div style="color:rgba(255,255,255,0.15)">Not affiliated with Deriv (Europe) Ltd.</div>
+    </div>
+    <p class="risk-note">Risk Disclaimer: Trading Forex, CFDs, and synthetic derivatives carries a high level of risk and may not be suitable for all investors. Past performance is not indicative of future results. You may lose some or all of your invested capital. BlueWave Bot is a software tool only; all trading decisions and their financial consequences remain your sole responsibility. Please ensure you fully understand the risks involved before trading.</p>
+  </div>
+</footer>
+
+<script>
+// Custom cursor
+const cursor = document.getElementById('cursor');
+const ring = document.getElementById('cursorRing');
+let mx = 0, my = 0, rx = 0, ry = 0;
+document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; });
+function animCursor() {
+  cursor.style.left = mx - 5 + 'px';
+  cursor.style.top = my - 5 + 'px';
+  rx += (mx - rx) * 0.12;
+  ry += (my - ry) * 0.12;
+  ring.style.left = rx - 19 + 'px';
+  ring.style.top = ry - 19 + 'px';
+  requestAnimationFrame(animCursor);
+}
+animCursor();
+document.querySelectorAll('a,button').forEach(el => {
+  el.addEventListener('mouseenter', () => { cursor.style.transform='scale(2.5)'; ring.style.transform='scale(1.5)'; ring.style.borderColor='rgba(0,212,255,0.8)'; });
+  el.addEventListener('mouseleave', () => { cursor.style.transform='scale(1)'; ring.style.transform='scale(1)'; ring.style.borderColor='rgba(0,212,255,0.5)'; });
+});
+
+// Scroll reveal
+const reveals = document.querySelectorAll('.reveal');
+const revealObs = new IntersectionObserver(entries => {
+  entries.forEach(e => { if(e.isIntersecting) { e.target.classList.add('visible'); revealObs.unobserve(e.target); } });
+}, { threshold: 0.12 });
+reveals.forEach(r => revealObs.observe(r));
+
+// FAQ accordion
+document.querySelectorAll('.faq-q').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const item = btn.closest('.faq-item');
+    const isOpen = item.classList.contains('open');
+    document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('open'));
+    if (!isOpen) item.classList.add('open');
+  });
+});
+
+// Ticker animation duplicate safety
+const ticker = document.getElementById('ticker');
+// already duplicated in HTML
+
+// Live feed updates — cycle trade results
+const feedItems = document.querySelectorAll('.feed-row');
+const results = [
+  { sym: 'BOOM 300 · Rise', val: '+$18.50', cls: 'win' },
+  { sym: 'CRASH 500 · Fall', val: '+$11.20', cls: 'win' },
+  { sym: 'V75 Index · Rise', val: '-$5.00', cls: 'loss' },
+  { sym: 'Step Index · Rise', val: 'OPEN', cls: 'pending' },
+  { sym: 'BOOM 1000 · Fall', val: '+$22.00', cls: 'win' },
+  { sym: 'CRASH 300 · Rise', val: '+$9.80', cls: 'win' },
+  { sym: 'EUR/USD · Buy', val: '-$3.50', cls: 'loss' },
+];
+let rIdx = 0;
+setInterval(() => {
+  const row = feedItems[Math.floor(Math.random() * feedItems.length)];
+  const r = results[rIdx % results.length];
+  rIdx++;
+  const dot = row.querySelector('.feed-dot');
+  const label = row.childNodes[1];
+  const val = row.querySelector('span:last-child');
+  dot.className = 'feed-dot ' + r.cls;
+  if (label.nodeType === 3) label.textContent = r.sym;
+  else row.childNodes[1].textContent = r.sym;
+  val.textContent = r.val;
+  val.style.color = r.cls === 'win' ? '#3ddc84' : r.cls === 'loss' ? '#ff5f57' : 'var(--gold)';
+  row.style.animation = 'none';
+  row.offsetHeight;
+  row.style.animation = 'fadeInRow 0.4s ease';
+}, 2800);
+</script>
+</body>
+</html>
